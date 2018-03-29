@@ -112,11 +112,10 @@ func TestEchoIt_Post_X_Header_Routing_Handler(t *testing.T) {
 		t.Fail()
 	}
 	if code != http.StatusOK {
-		t.Log("Failed")
+		t.Logf("statusCode - want: %d, got: %d", http.StatusOK, code)
 	}
 	if body != reqBody {
-		t.Log("Expected body returned")
+		t.Logf("Expected body from echo function to be equal to input, but was: %s", body)
 		t.Fail()
 	}
-
 }

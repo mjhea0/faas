@@ -115,11 +115,10 @@ func main() {
 
 	r.PathPrefix("/ui/").Handler(http.StripPrefix("/ui", fsCORS)).Methods(http.MethodGet)
 
-	r.HandleFunc("/", faasHandlers.RoutelessProxy).Methods(http.MethodPost)
-
 	metricsHandler := metrics.PrometheusHandler()
 	r.Handle("/metrics", metricsHandler)
-	r.Handle("/", http.RedirectHandler("/ui/", http.StatusMovedPermanently)).Methods(http.MethodGet)
+
+	r.HandleFunc("/", makeBaseHandler("X-Function", faasHandlers.RoutelessProxy, http.RedirectHandler("/ui/", http.StatusMovedPermanently))).Methods(http.MethodGet, http.MethodPost)
 
 	tcpPort := 8080
 
@@ -132,4 +131,17 @@ func main() {
 	}
 
 	log.Fatal(s.ListenAndServe())
+}
+
+// makeBaseHandler creates a handler which can route traffic
+// to a specific handler if a conditionalHeader is defined and
+// otherwise routes to a fallback Handler to serve the traffic
+func makeBaseHandler(conditionalHeader string, primary http.HandlerFunc, fallback http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if header := r.Header.Get(conditionalHeader); len(header) > 0 {
+			primary(w, r)
+		} else {
+			fallback.ServeHTTP(w, r)
+		}
+	}
 }
